@@ -1,0 +1,55 @@
+name: Build Scoped APK from Upstream
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-scoped:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout upstream latest
+        uses: actions/checkout@v4
+        with:
+          repository: HuangZhuoRui/LocationSpoofer
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Build scoped (non-global) APK
+        env:
+          SCOPED_APPLICATION_ID: com.whoiswei114514.locationspoofer.scoped
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon :app:assembleScopedDebug
+
+      - name: Collect artifact
+        run: |
+          DIST_DIR="app/build/outputs/apk/dist"
+          mkdir -p "$DIST_DIR"
+          DATE_TAG="$(date +%Y%m%d)"
+          find "app/build/outputs/apk/scoped/debug" -name "*.apk" -print0 | while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            if [[ "$base" == *"arm64-v8a"* ]]; then
+              cp "$file" "$DIST_DIR/LocationSpoofer-scoped-arm64-v8a-upstream-$DATE_TAG.apk"
+            elif [[ "$base" == *"armeabi-v7a"* ]]; then
+              cp "$file" "$DIST_DIR/LocationSpoofer-scoped-armeabi-v7a-upstream-$DATE_TAG.apk"
+            else
+              cp "$file" "$DIST_DIR/LocationSpoofer-scoped-upstream-$DATE_TAG.apk"
+            fi
+          done
+          ls -l "$DIST_DIR"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoped-upstream-apk
+          path: app/build/outputs/apk/dist/LocationSpoofer-scoped-*.apk
+          if-no-files-found: error

@@ -27,6 +27,8 @@ android {
 
     val googleMapsApiKey =
         System.getenv("GOOGLE_MAPS_API_KEY") ?: getLocalConfig("GOOGLE_MAPS_API_KEY") ?: ""
+    val scopedApplicationIdOverride =
+        System.getenv("SCOPED_APPLICATION_ID") ?: getLocalConfig("SCOPED_APPLICATION_ID")
 
     defaultConfig {
         applicationId = "com.vincenthzr.locationspoofer"
@@ -59,6 +61,9 @@ android {
         create("scoped") {
             dimension = "scheme"
             buildConfigField("boolean", "GLOBAL_SCHEME", "false")
+            if (!scopedApplicationIdOverride.isNullOrBlank()) {
+                applicationId = scopedApplicationIdOverride
+            }
         }
         create("global") {
             dimension = "scheme"
